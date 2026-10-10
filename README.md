@@ -77,6 +77,17 @@ Sessions are httpOnly cookies (`nac_at` access, `nac_rt` refresh); `src/proxy.ts
 guards app routes and gates `/admin` by role. When `AUTH_SECRET` is unset the
 proxy fails open, so the offline demo still works without a database.
 
+### `gpt-4o-mini` endpoints
+
+Both routes are auth-gated and **fail soft**: the client falls back to its own
+rule engine / on-device engine on any error (offline, unauthenticated, AI
+disabled, model error).
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/v1/assistant/chat` | Grounded assistant — deterministic engines compute the facts, the model only narrates them |
+| `POST /api/v1/diagnose/analyze` | Vision crop diagnosis — the model reads the photo and picks the issue from the crop's catalog; every number (confidence, severity, dosage, waiting/revisit days) is computed in code |
+
 ## Routes (so far)
 
 | Route | Page |
@@ -161,7 +172,9 @@ proxy fails open, so the offline demo still works without a database.
 │       ├── weather.ts  alerts.ts  logistics.ts  facilities.ts  shipments.ts
 │       ├── prices.ts  market.ts  credit.ts  assistant.ts   # module engines (deterministic)
 │       ├── soil.ts  yield.ts  insurance.ts  admin.ts  dashboard.ts
-│       └── diagnose.ts        # photo pre-processing + demo diagnosis engine
+│       ├── diagnose.ts        # photo pre-processing + deterministic diagnosis engine
+│       ├── diagnose/vision.ts # server-side gpt-4o-mini vision diagnosis
+│       └── diagnose-api.ts    # client call to /api/v1/diagnose/analyze
 ├── public/                    # static assets + sw.js (offline service worker)
 ├── db/schema.sql              # Postgres schema (users, sessions, audit_logs)
 ├── scripts/                   # db-migrate.mjs, db-seed.mjs (+ _env.mjs)
@@ -192,6 +205,7 @@ proxy fails open, so the offline demo still works without a database.
 - [x] Vercel-ready auth: Next.js Route Handlers + Vercel Postgres (`db/schema.sql`, `scripts/db-migrate.mjs`, `scripts/db-seed.mjs`), JWT httpOnly cookie sessions, `src/proxy.ts` route + role guard, `/403`
 - [x] Login / signup / recovery wired to the API — **any 6-digit OTP** (hackathon mode) with a demo-mode fallback when the DB is absent
 - [x] `GET /api/v1/health` reporting DB / auth / AI status; `gpt-4o-mini` client ready (`src/lib/openai.ts`)
+- [x] `gpt-4o-mini` wired into `/assistant` (grounded narration) and `/diagnose` (vision) behind auth-gated routes, with offline/on-device fallbacks
 - [x] Static build passes; lint clean; API routes verified dynamic
 - [ ] Wire the remaining module engines (weather, map, shipments, marketplace, finance) to `gpt-4o-mini` + the database
 - [ ] Real SMS gateway (hackathon build accepts any 6-digit code), Open-Meteo + mandi/eNAM data adapters

@@ -81,6 +81,11 @@ export default function DiagnosisDetail({ id }: { id: string }) {
                 {result.issue_local} · {result.crop} · {partLabel(result.part)} · {result.district}
               </p>
             </div>
+            {result.engine ? (
+              <span className="rounded-full border border-forest-950/12 px-3 py-1 text-[11px] font-bold text-ink-500">
+                {result.engine === "vision" ? "gpt-4o mini vision" : "on-device engine"}
+              </span>
+            ) : null}
             <span className={`ml-auto rounded-full px-3 py-1 text-xs font-bold ${sm.chip}`}>
               {sm.label}
             </span>

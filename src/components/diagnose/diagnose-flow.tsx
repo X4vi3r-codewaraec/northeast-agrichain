@@ -6,6 +6,7 @@ import { Icon, type IconName } from "@/components/icons";
 import { Pill } from "@/components/ui/primitives";
 import { CROPS, NER_STATES } from "@/lib/data";
 import { useSpeech } from "@/hooks/use-speech";
+import { analyzeDiagnosis } from "@/lib/diagnose-api";
 import {
   prepareImage,
   runMockDiagnosis,
@@ -218,6 +219,11 @@ function ResultCard({ result, onReset }: { result: DiagnosisResult; onReset: () 
             Full result page
           </Link>
           <span className="ml-auto text-[11px] font-medium text-ink-400">
+            {result.engine === "vision"
+              ? "gpt-4o mini vision · "
+              : result.engine === "on-device"
+                ? "on-device engine · "
+                : ""}
             Diagnosis {result.id}
           </span>
         </div>
@@ -270,6 +276,8 @@ export default function DiagnoseFlow() {
   const [offline, setOffline] = useState(() => typeof navigator !== "undefined" && !navigator.onLine);
   const fileInput = useRef<HTMLInputElement>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
+  // null = unknown yet, false = AI off/unavailable → use the on-device engine.
+  const aiRef = useRef<boolean | null>(null);
 
   const crop = useMemo(() => CROPS.find((c) => c.id === cropId) ?? CROPS[0], [cropId]);
 
@@ -278,13 +286,11 @@ export default function DiagnoseFlow() {
       setStage("preparing");
       await sleep(650);
       setStage("context");
-      await sleep(600);
+      await sleep(500);
       setStage("vision");
-      await sleep(1100);
-      setStage("remedy");
-      await sleep(450);
-      try {
-        const res = await runMockDiagnosis({
+
+      const onDevice = () =>
+        runMockDiagnosis({
           imageDataUrl: job.dataUrl,
           thumb: job.thumb,
           cropId: job.cropId,
@@ -292,6 +298,27 @@ export default function DiagnoseFlow() {
           part: job.part,
           district: job.district,
         });
+
+      const canUseApi =
+        aiRef.current !== false &&
+        (typeof navigator === "undefined" || navigator.onLine !== false);
+
+      // Prefer gpt-4o mini vision; degrade to the on-device engine on any error.
+      const work = canUseApi
+        ? analyzeDiagnosis({
+            image: job.dataUrl,
+            cropId: job.cropId,
+            part: job.part,
+            district: job.district,
+            thumbnail: job.thumb,
+          }).catch(() => onDevice())
+        : onDevice();
+
+      await sleep(900);
+      setStage("remedy");
+      await sleep(350);
+      try {
+        const res = await work;
         setResult(res);
         setHistory((prev) => {
           const next = [res, ...prev].slice(0, MAX_HISTORY);
@@ -306,6 +333,22 @@ export default function DiagnoseFlow() {
     },
     [],
   );
+
+  // Probe once whether the deployment has the vision model enabled.
+  useEffect(() => {
+    let active = true;
+    fetch("/api/v1/health", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { ai?: { configured?: boolean } } | null) => {
+        if (active && d) aiRef.current = Boolean(d.ai?.configured);
+      })
+      .catch(() => {
+        /* keep the on-device default */
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const flushQueue = useCallback(async () => {
     let q = loadJson<QueuedJob>(QUEUE_KEY);
@@ -609,9 +652,10 @@ export default function DiagnoseFlow() {
                   Your diagnosis appears here
                 </p>
                 <p className="mx-auto mt-1.5 max-w-sm text-sm text-ink-500">
-                  Upload a photo, pick the crop and part, then hit Analyse. Demo
-                  runs on-device with the same schema the FastAPI service will
-                  use with <strong>gpt-4o-mini</strong>.
+                  Upload a photo, pick the crop and part, then hit Analyse. Online,
+                  <strong> gpt-4o mini vision</strong> reads the leaf; offline it
+                  falls back to the on-device engine. Severity, dosage and timing
+                  stay code-computed.
                 </p>
                 {offline ? (
                   <p className="mx-auto mt-3 inline-flex items-center gap-2 rounded-full bg-yellow-100 px-3.5 py-1.5 text-xs font-bold text-yellow-900">

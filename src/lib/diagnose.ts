@@ -32,6 +32,8 @@ export type DiagnosisResult = {
   notes: string;
   thumbnail: string; // small data URL for history
   lowConfidence: boolean;
+  /** Which engine produced the text fields (numbers always come from the catalog). */
+  engine?: "vision" | "on-device";
 };
 
 export type DiagnosisStage =
@@ -100,7 +102,7 @@ export function prepareImage(file: File): Promise<{ dataUrl: string; thumb: stri
   });
 }
 
-type ColorHint =
+export type ColorHint =
   | "yellow"
   | "spotted"
   | "powdery"
@@ -168,7 +170,10 @@ export type IssueMatch = {
   baseSeverity: Severity;
 };
 
-const ISSUE_CATALOG: IssueMatch[] = [
+/** Deterministic issue catalog — the single source of every number the
+ *  diagnosis returns (severity, dosage, waiting/revisit days). Shared by the
+ *  on-device engine and the server-side vision route. */
+export const ISSUE_CATALOG: IssueMatch[] = [
   {
     id: "blast",
     issue: "Rice leaf blast",
@@ -450,6 +455,7 @@ export async function runMockDiagnosis(opts: {
     notes: pick.notes,
     thumbnail: thumb,
     lowConfidence,
+    engine: "on-device",
   };
 }
 
@@ -514,5 +520,6 @@ export function diagnosisById(id: string): DiagnosisResult {
     notes: pick.notes,
     thumbnail: "",
     lowConfidence: confidence < 0.55,
+    engine: "on-device",
   };
 }
