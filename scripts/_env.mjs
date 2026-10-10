@@ -25,11 +25,32 @@ export function loadEnv() {
   }
 }
 
+/** node-postgres has no channel binding — drop params Neon adds. */
+function sanitize(value) {
+  if (!value) return value;
+  return value
+    .replace(/([?&])(channel_binding|sslmode)=[^&]*/g, "$1")
+    .replace(/\?&/g, "?")
+    .replace(/&&/g, "&")
+    .replace(/[?&]$/g, "");
+}
+
+/** Runtime connection string (pooled is fine for the app). */
 export function connectionString() {
-  return (
+  return sanitize(
     process.env.POSTGRES_URL ||
-    process.env.DATABASE_URL ||
-    process.env.POSTGRES_URL_NON_POOLING
+      process.env.DATABASE_URL ||
+      process.env.POSTGRES_URL_NON_POOLING,
+  );
+}
+
+/** Migrations prefer the direct (unpooled) connection on Neon. */
+export function migrationConnectionString() {
+  return sanitize(
+    process.env.DATABASE_URL_UNPOOLED ||
+      process.env.POSTGRES_URL_NON_POOLING ||
+      process.env.DATABASE_URL ||
+      process.env.POSTGRES_URL,
   );
 }
 

@@ -3,11 +3,11 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Client } from "pg";
-import { connectionString, loadEnv, sslFor } from "./_env.mjs";
+import { loadEnv, migrationConnectionString, sslFor } from "./_env.mjs";
 
 loadEnv();
 
-const cs = connectionString();
+const cs = migrationConnectionString();
 if (!cs) {
   console.error(
     "✗ Missing POSTGRES_URL / DATABASE_URL. Create .env.local (copy .env.example).",
@@ -15,15 +15,31 @@ if (!cs) {
   process.exit(1);
 }
 
+const statements = readFileSync(resolve(process.cwd(), "db/schema.sql"), "utf8")
+  .split(";")
+  .map((statement) => statement.trim())
+  .filter(Boolean);
+
 const client = new Client({ connectionString: cs, ssl: sslFor(cs) });
 
 try {
   await client.connect();
-  const sql = readFileSync(resolve(process.cwd(), "db/schema.sql"), "utf8");
-  await client.query(sql);
-  console.log("✓ Schema applied to the database.");
+  await client.query("begin");
+  for (const statement of statements) {
+    await client.query(statement);
+  }
+  await client.query("commit");
+  console.log(`✓ Schema applied (${statements.length} statements).`);
 } catch (error) {
-  console.error("✗ Migration failed:", error instanceof Error ? error.message : error);
+  try {
+    await client.query("rollback");
+  } catch {
+    // ignore rollback failures
+  }
+  console.error(
+    "✗ Migration failed:",
+    error instanceof Error ? error.message : error,
+  );
   process.exitCode = 1;
 } finally {
   await client.end();

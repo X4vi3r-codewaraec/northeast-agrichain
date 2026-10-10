@@ -15,11 +15,23 @@ export class DbNotConfiguredError extends Error {
 }
 
 function connectionString(): string | undefined {
-  return (
-    process.env.POSTGRES_URL ??
-    process.env.DATABASE_URL ??
-    process.env.POSTGRES_URL_NON_POOLING
-  );
+  const raw =
+    process.env.POSTGRES_URL ||
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL_NON_POOLING;
+  return raw ? sanitizeConnectionString(raw) : undefined;
+}
+
+/**
+ * node-postgres has no channel binding, and we set TLS explicitly, so drop the
+ * `channel_binding` / `sslmode` query params that Neon adds.
+ */
+function sanitizeConnectionString(value: string): string {
+  return value
+    .replace(/([?&])(channel_binding|sslmode)=[^&]*/g, "$1")
+    .replace(/\?&/g, "?")
+    .replace(/&&/g, "&")
+    .replace(/[?&]$/g, "");
 }
 
 export function isDbConfigured(): boolean {
