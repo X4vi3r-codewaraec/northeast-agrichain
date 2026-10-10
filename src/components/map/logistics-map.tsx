@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Icon, type IconName } from "@/components/icons";
+import InteractiveMap from "@/components/map/interactive-map";
 import { Pill } from "@/components/ui/primitives";
 import { NER_STATES, CROPS } from "@/lib/data";
 import { districtGeo } from "@/lib/geo";
@@ -35,16 +36,6 @@ const TYPE_DOT: Record<FacilityType, string> = {
   ripening: "#f2a93b",
   curing: "#2e6b3e",
 };
-
-type MapPoint = { lat: number; lon: number };
-
-function project(p: MapPoint, b: { minLat: number; maxLat: number; minLon: number; maxLon: number }) {
-  const x = ((p.lon - b.minLon) / (b.maxLon - b.minLon)) * 900 + 40;
-  const y = ((b.maxLat - p.lat) / (b.maxLat - b.minLat)) * 480 + 40;
-  return { x, y };
-}
-
-const BOUNDS = { minLat: 22.4, maxLat: 28.7, minLon: 88.4, maxLon: 97.5 };
 
 function FacilityPanel({
   facility,
@@ -421,76 +412,27 @@ export default function LogisticsMap() {
 
           {/* Map + detail */}
           <div className="space-y-5">
-            {/* SVG map */}
+            {/* Interactive map */}
             <div className="overflow-hidden rounded-3xl border border-forest-950/8 bg-white shadow-sm">
               <div className="flex items-center justify-between border-b border-forest-950/6 px-5 py-3">
                 <p className="text-xs font-bold uppercase tracking-wide text-ink-400">
-                  NER facility map · offline-safe outlines
+                  NER facility map · OpenStreetMap
                 </p>
                 <Pill>
                   {facilities.length} shown of {FACILITIES.length}
                 </Pill>
               </div>
-              <svg viewBox="0 0 980 560" className="w-full bg-[#eef3ea]" role="img" aria-label="Map of NER facilities">
-                <defs>
-                  <pattern id="mapgrid" width="70" height="70" patternUnits="userSpaceOnUse">
-                    <path d="M70 0H0V70" fill="none" stroke="#d7e0d2" strokeWidth="1" />
-                  </pattern>
-                </defs>
-                <rect width="980" height="560" fill="url(#mapgrid)" />
-                {/* faint region blob for flavour (no geo fidelity needed) */}
-                <path
-                  d="M120 200 Q260 90 430 110 Q600 90 760 160 Q900 230 900 340 Q880 460 720 470 Q560 480 420 460 Q240 440 120 340 Q80 280 120 200Z"
-                  fill="#e2ead9"
-                  stroke="#c3d2b8"
-                  strokeWidth="1.5"
-                  strokeDasharray="6 5"
-                />
-                {originGeo ? (
-                  <>
-                    <circle
-                      cx={project(originGeo, BOUNDS).x}
-                      cy={project(originGeo, BOUNDS).y}
-                      r="22"
-                      fill="#2e6b3e"
-                      opacity="0.15"
-                    >
-                      <animate attributeName="r" values="10;26;10" dur="2.4s" repeatCount="indefinite" />
-                    </circle>
-                    <circle cx={project(originGeo, BOUNDS).x} cy={project(originGeo, BOUNDS).y} r="6" fill="#2e6b3e" />
-                    <text
-                      x={project(originGeo, BOUNDS).x}
-                      y={project(originGeo, BOUNDS).y - 14}
-                      textAnchor="middle"
-                      fontSize="12"
-                      fontWeight="700"
-                      fill="#0a1e12"
-                    >
-                      {originGeo.label}
-                    </text>
-                  </>
-                ) : null}
-                {facilities.map(({ facility }) => {
-                  const p = project(facility, BOUNDS);
-                  const active = selected?.id === facility.id;
-                  return (
-                    <g key={facility.id} className="cursor-pointer" onClick={() => setSelectedId(facility.id)}>
-                      <circle key={`halo-${facility.id}`} cx={p.x} cy={p.y} r={active ? 16 : 11} fill={TYPE_DOT[facility.type]} opacity="0.18" />
-                      <circle cx={p.x} cy={p.y} r={active ? 8 : 5.5} fill={TYPE_DOT[facility.type]} stroke="#fff" strokeWidth="1.6" />
-                      <text
-                        x={p.x}
-                        y={p.y - (active ? 14 : 11)}
-                        textAnchor="middle"
-                        fontSize={active ? 11 : 9}
-                        fontWeight="600"
-                        fill={active ? "#0a1e12" : "#4a5a50"}
-                      >
-                        {facility.name.split(" ").slice(0, active ? 2 : 1).join(" ")}
-                      </text>
-                    </g>
-                  );
-                })}
-              </svg>
+              <InteractiveMap
+                className="relative z-0 h-[420px] w-full sm:h-[500px]"
+                origin={originGeo}
+                facilities={facilities.map((x) => x.facility)}
+                selectedId={selected?.id ?? null}
+                onSelect={(id) => {
+                  setSelectedId(id);
+                  setBooked(false);
+                }}
+                typeColor={TYPE_DOT}
+              />
               <div className="flex flex-wrap gap-3 border-t border-forest-950/6 px-5 py-3">
                 {(["cold", "godown", "ripening", "curing"] as const).map((t) => (
                   <span key={t} className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-ink-600">
@@ -498,6 +440,10 @@ export default function LogisticsMap() {
                     {FACILITY_TYPE_LABEL[t]}
                   </span>
                 ))}
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-ink-600">
+                  <span className="h-2.5 w-2.5 rounded-full bg-forest-700" />
+                  Origin
+                </span>
               </div>
             </div>
 

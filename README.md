@@ -9,7 +9,8 @@ Docs: [`Project.md`](./Project.md) (requirements) · [`PLAN.md`](./PLAN.md) (bui
 ## Stack
 
 **Next.js 16** (App Router) · React 19 · TypeScript · Tailwind CSS v4 · Turbopack
-(backend FastAPI + PostgreSQL/PostGIS + Redis planned per `PLAN.md`)
+· **Vercel Postgres (Neon)** + Next.js Route Handlers for auth
+(a standalone FastAPI + PostGIS scaffold remains in `api/` for reference; see `PLAN.md`)
 
 ## Run it
 
@@ -24,7 +25,57 @@ npm.cmd run lint     # ESLint
 > **Windows note:** PowerShell script execution is disabled on this machine, so
 > use `npm.cmd` instead of `npm` when running commands from the shell.
 
-Demo login: any 10-digit phone → OTP `123456` → signed in as a demo farmer.
+Demo login: any 10-digit phone → **any 6-digit OTP** → signed in. Without
+`POSTGRES_URL`, the login screen offers a "Continue in demo mode" fallback so the
+offline demo keeps working.
+
+### Local development with the database
+
+```bash
+copy .env.example .env.local   # fill POSTGRES_URL + AUTH_SECRET
+npm.cmd run db:migrate         # create tables (idempotent)
+npm.cmd run db:seed            # optional: one demo account per role
+```
+
+Seeded numbers map to specific roles (e.g. `9876543210` → farmer,
+`9876500004` → admin); any other number proceeds to full sign-up.
+
+## Deploy to Vercel (auth + Postgres + gpt-4o-mini)
+
+Auth runs as **Next.js Route Handlers** (`src/app/api/v1/...`) against **Vercel
+Postgres** (Neon) — no separate Python service is needed to deploy.
+
+1. Push the repo to GitHub and import it at [vercel.com/new](https://vercel.com/new).
+2. **Create the database:** project → **Storage → Create → Postgres**. Vercel
+   injects `POSTGRES_URL` into the project automatically.
+3. **Set env vars** (Settings → Environment Variables):
+   - `AUTH_SECRET` — a long random string (`openssl rand -base64 32`)
+   - `OPENAI_API_KEY` — for `gpt-4o-mini`
+   - `OPENAI_MODEL` — optional, defaults to `gpt-4o-mini`
+4. **Create the tables + demo accounts** (once, locally, against the Vercel DB):
+
+   ```bash
+   vercel env pull .env.local
+   npm.cmd run db:migrate
+   npm.cmd run db:seed
+   ```
+
+5. Deploy — every push goes live automatically.
+
+### Auth at a glance
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/v1/auth/otp/request` | Validates the number (no SMS in the hackathon build) |
+| `POST /api/v1/auth/otp/verify` | **Accepts any 6-digit code**; signs in, or creates the account when a profile is supplied |
+| `POST /api/v1/auth/refresh` | Rotates the session from the refresh cookie |
+| `POST /api/v1/auth/logout` | Revokes the session and clears cookies |
+| `GET /api/v1/auth/me` | Current user (or `null`) |
+| `GET /api/v1/health` | DB / auth / AI configuration status |
+
+Sessions are httpOnly cookies (`nac_at` access, `nac_rt` refresh); `src/proxy.ts`
+guards app routes and gates `/admin` by role. When `AUTH_SECRET` is unset the
+proxy fails open, so the offline demo still works without a database.
 
 ## Routes (so far)
 
@@ -55,9 +106,9 @@ Demo login: any 10-digit phone → OTP `123456` → signed in as a demo farmer.
 | `/dashboard` | Role-aware dashboard (farmer/FPO/buyer/transporter/admin KPIs, advisory with TTS, activity) |
 | `/settings` | Language, voice speed and low-bandwidth controls |
 | `/help` | Help centre (FAQ, topics, offline tips, support) |
-| `/forgot` | Account recovery (phone re-OTP → new PIN) |
+| `/forgot` | Account recovery (phone + any 6-digit OTP) |
 | `/assistant` | Voice-first GPT-4o mini agri assistant (quick replies, deep-link actions, TTS) |
-| `/login` | Phone + OTP login (demo OTP `123456`) |
+| `/login` | Phone + any 6-digit OTP login |
 | `/signup` | Role-based account creation |
 | `/verify` | Redirects to `/login` |
 | `/offline` | PWA offline fallback |
@@ -77,7 +128,9 @@ Demo login: any 10-digit phone → OTP `123456` → signed in as a demo farmer.
 │   │   │   ├── marketplace/new/  marketplace/[id]/
 │   │   │   ├── map/facility/[id]/  shipments/[id]/  diagnose/[id]/
 │   │   │   └── [...slug]/     # catch-all “module in progress”
-│   │   ├── dashboard/         # app shell (post-login, no marketing header)
+│   │   ├── 403/               # access-denied screen
+│   ├── api/v1/            # Route Handlers: auth (otp/refresh/logout/me) + health
+│   ├── dashboard/         # app shell (post-login, no marketing header)
 │   │   ├── offline/           # PWA offline fallback
 │   │   ├── manifest.ts        # PWA web app manifest
 │   │   ├── layout.tsx         # fonts, metadata, viewport, SW registration
@@ -93,10 +146,16 @@ Demo login: any 10-digit phone → OTP `123456` → signed in as a demo farmer.
 │   │   ├── public/            # shared CTA band
 │   │   ├── ui/                # primitives (Eyebrow, SectionHeading, CheckItem…)
 │   │   └── icons.tsx          # inline SVG icon set + logo
+│   ├── proxy.ts               # Next 16 middleware: session + role guard
 │   └── lib/
+│       ├── db.ts              # Postgres pool + query helpers
+│       ├── api-client.ts      # fetch wrapper (API error envelope)
+│       ├── auth-api.ts        # client calls to /api/v1/auth/*
+│       ├── openai.ts          # gpt-4o-mini client (server-only)
+│       ├── auth/              # config, jwt, session, users, cookies, crypto, http
 │       ├── data.ts            # states, crops, modules, personas, prices (static)
 │       ├── geo.ts             # 26 district coords/elevation for routing & weather
-│       ├── auth-client.ts     # mock localStorage session helpers
+│       ├── auth-client.ts     # session mirror + roleHome (localStorage + server sync)
 │       ├── i18n.ts            # language store + dictionary (t(), useLanguage)
 │       ├── settings.ts        # voice speed, data-saver preferences
 │       ├── weather.ts  alerts.ts  logistics.ts  facilities.ts  shipments.ts
@@ -104,7 +163,9 @@ Demo login: any 10-digit phone → OTP `123456` → signed in as a demo farmer.
 │       ├── soil.ts  yield.ts  insurance.ts  admin.ts  dashboard.ts
 │       └── diagnose.ts        # photo pre-processing + demo diagnosis engine
 ├── public/                    # static assets + sw.js (offline service worker)
-├── api/                       # FastAPI backend scaffold (PostGIS + Redis + gpt-4o-mini)
+├── db/schema.sql              # Postgres schema (users, sessions, audit_logs)
+├── scripts/                   # db-migrate.mjs, db-seed.mjs (+ _env.mjs)
+├── api/                       # FastAPI backend scaffold (reference alternative)
 ├── AGENTS.md                  # Next.js 16 version-matched agent rules
 ├── PLAN.md                    # detailed build plan
 ├── Project.md                 # original project requirements
@@ -128,7 +189,9 @@ Demo login: any 10-digit phone → OTP `123456` → signed in as a demo farmer.
 - [x] Role-aware `/dashboard` (farmer/FPO/buyer/transporter/admin), `/settings`, `/help`, `/forgot`
 - [x] PWA offline shell: `manifest.ts`, `public/sw.js`, `/offline`, SW registration, theme colour
 - [x] i18n scaffold (`lib/i18n.ts` + header language store) and voice-speed preference (`lib/settings.ts`)
-- [x] FastAPI backend scaffold (`api/`): OTP → JWT RBAC, PostGIS schema, Redis OTP store, deterministic `POST /diagnose`, `gpt-4o-mini` narration wrapper, Docker/compose
-- [x] Static build passes (58 routes); lint clean
-- [ ] Wire the frontend to the live API (currently runs on deterministic demo engines with matching contracts)
-- [ ] SMS OTP gateway, Alembic models, Open-Meteo + mandi/eNAM data adapters
+- [x] Vercel-ready auth: Next.js Route Handlers + Vercel Postgres (`db/schema.sql`, `scripts/db-migrate.mjs`, `scripts/db-seed.mjs`), JWT httpOnly cookie sessions, `src/proxy.ts` route + role guard, `/403`
+- [x] Login / signup / recovery wired to the API — **any 6-digit OTP** (hackathon mode) with a demo-mode fallback when the DB is absent
+- [x] `GET /api/v1/health` reporting DB / auth / AI status; `gpt-4o-mini` client ready (`src/lib/openai.ts`)
+- [x] Static build passes; lint clean; API routes verified dynamic
+- [ ] Wire the remaining module engines (weather, map, shipments, marketplace, finance) to `gpt-4o-mini` + the database
+- [ ] Real SMS gateway (hackathon build accepts any 6-digit code), Open-Meteo + mandi/eNAM data adapters
