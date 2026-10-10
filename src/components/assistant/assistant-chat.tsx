@@ -5,7 +5,14 @@ import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { Eyebrow } from "@/components/ui/primitives";
 import { useSpeech } from "@/hooks/use-speech";
-import { answerMessage, chunkReply, QUICK_REPLIES, type AssistantAction } from "@/lib/assistant";
+import {
+  answerMessage,
+  chunkReply,
+  QUICK_REPLIES,
+  type AssistantAction,
+  type ChatSource,
+} from "@/lib/assistant";
+import { chatWithAssistant, type AssistantChatTurn } from "@/lib/assistant-api";
 
 type Msg = {
   id: string;
@@ -13,6 +20,7 @@ type Msg = {
   text: string;
   actions: AssistantAction[];
   done: boolean;
+  source?: ChatSource;
 };
 
 let seq = 0;
@@ -29,6 +37,7 @@ const GREETING: Msg = {
     { label: "Cold storage near me", href: "/map", icon: "truck" },
   ],
   done: true,
+  source: "rules",
 };
 
 function ActionButton({ a }: { a: AssistantAction }) {
@@ -58,6 +67,7 @@ export default function AssistantChat() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recogRef = useRef<{ stop: () => void } | null>(null);
   const budgetRef = useRef(10); // token bucket: +1 per minute, max 10
+  const aiRef = useRef<boolean | null>(null); // null = unknown (probe pending)
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -68,6 +78,22 @@ export default function AssistantChat() {
       clearTimeout(t);
       if (intervalRef.current) clearInterval(intervalRef.current);
       recogRef.current?.stop?.();
+    };
+  }, []);
+
+  // Probe once to learn whether the server assistant has an AI key configured.
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/v1/health", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { ai?: { configured?: boolean } } | null) => {
+        if (alive) aiRef.current = Boolean(j?.ai?.configured);
+      })
+      .catch(() => {
+        if (alive) aiRef.current = false;
+      });
+    return () => {
+      alive = false;
     };
   }, []);
 
@@ -85,6 +111,39 @@ export default function AssistantChat() {
     setStreaming(false);
   };
 
+  const runStream = (
+    replyId: string,
+    full: string,
+    actions: AssistantAction[],
+    source: ChatSource,
+  ) => {
+    const chunks = chunkReply(full);
+    streamRef.current = { id: replyId, buf: "", chunks };
+    setMessages((prev) =>
+      prev.map((m) => (m.id === replyId ? { ...m, actions, source } : m)),
+    );
+    setStreaming(true);
+    intervalRef.current = setInterval(() => {
+      const s = streamRef.current;
+      if (!s) {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        intervalRef.current = null;
+        return;
+      }
+      if (s.chunks.length === 0) {
+        const done = s.buf;
+        setMessages((prev) =>
+          prev.map((m) => (m.id === s.id ? { ...m, text: done, done: true } : m)),
+        );
+        finishStream();
+        if (autoSpeak) speak(done);
+        return;
+      }
+      s.buf = `${s.buf} ${s.chunks.shift()}`.trim();
+      setMessages((prev) => prev.map((m) => (m.id === s.id ? { ...m, text: s.buf } : m)));
+    }, 60);
+  };
+
   const send = (raw: string) => {
     const text = raw.trim();
     if (!text || streaming) return;
@@ -100,40 +159,38 @@ export default function AssistantChat() {
     }, 60_000);
 
     const userMsg: Msg = { id: nextId(), role: "user", text, actions: [], done: true };
-    const reply = answerMessage(text);
     const replyId = nextId();
     const replyMsg: Msg = {
       id: replyId,
       role: "assistant",
       text: "",
-      actions: reply.actions,
+      actions: [],
       done: false,
     };
+    const history: AssistantChatTurn[] = messages
+      .filter((m) => m.done && m.text.trim())
+      .slice(-6)
+      .map((m) => ({ role: m.role, text: m.text }));
+
     setMessages((prev) => [...prev, userMsg, replyMsg]);
     setInput("");
-
-    const chunks = chunkReply(reply.text);
-    streamRef.current = { id: replyId, buf: "", chunks };
     setStreaming(true);
-    intervalRef.current = setInterval(() => {
-      const s = streamRef.current;
-      if (!s) {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        intervalRef.current = null;
-        return;
-      }
-      if (s.chunks.length === 0) {
-        setMessages((prev) =>
-          prev.map((m) => (m.id === s.id ? { ...m, text: s.buf, done: true } : m)),
-        );
-        const full = s.buf;
-        finishStream();
-        if (autoSpeak) speak(full);
-        return;
-      }
-      s.buf = `${s.buf} ${s.chunks.shift()}`.trim();
-      setMessages((prev) => prev.map((m) => (m.id === s.id ? { ...m, text: s.buf } : m)));
-    }, 60);
+
+    const fallbackToRules = (wentOffline = false) => {
+      const local = answerMessage(text);
+      if (wentOffline) setOffline(true);
+      runStream(replyId, local.text, local.actions, wentOffline ? "offline" : "rules");
+    };
+
+    const isOffline = typeof navigator !== "undefined" && navigator.onLine === false;
+    if (isOffline || aiRef.current === false) {
+      fallbackToRules(isOffline);
+      return;
+    }
+
+    chatWithAssistant({ message: text, history })
+      .then((res) => runStream(replyId, res.text, res.actions, "ai"))
+      .catch(() => fallbackToRules());
   };
 
   const startMic = () => {
@@ -247,7 +304,11 @@ export default function AssistantChat() {
                   {m.role === "assistant" && m.done ? (
                     <div className="mt-2 flex items-center gap-1.5 text-[10px] font-semibold text-ink-400">
                       <Icon name="sparkles" className="h-3 w-3" />
-                      gpt-4o mini · rule-based demo
+                      {m.source === "ai"
+                        ? "gpt-4o mini · grounded answer"
+                        : m.source === "offline"
+                          ? "offline · rule-based answer"
+                          : "rule-based answer"}
                     </div>
                   ) : null}
                 </div>

@@ -1,11 +1,11 @@
 /**
- * Demo assistant engine — mirrors the future FastAPI contract
- * `POST /assistant/chat (SSE) · GET /assistant/history`.
+ * Assistant engine — rule-based intent router + deterministic numbers
+ * (hard project rule: the LLM never produces scores/amounts/ETAs).
  *
- * Rule-based intent router + deterministic numbers (hard project rule:
- * the LLM never produces scores/amounts/ETAs). gpt-4o mini (later) writes
- * the prose and `actions[]`; here the router does it locally so the module
- * ships before the backend.
+ * The intent router and action map are shared between the client fallback
+ * (`answerMessage`, works offline) and the server route
+ * `POST /api/v1/assistant/chat`, where gpt-4o mini narrates the facts the
+ * deterministic engines computed.
  */
 
 export type AssistantAction = {
@@ -20,6 +20,9 @@ export type ChatReply = {
   intent: string;
   offline?: boolean;
 };
+
+/** Where a reply came from — surfaced in the UI footer. */
+export type ChatSource = "ai" | "rules" | "offline";
 
 export const QUICK_REPLIES = [
   "What should I sow this week?",
@@ -53,7 +56,26 @@ function act(id: string): AssistantAction {
   return { label: `${label} → ${hint}`, href: `/${id === "diagnosis" ? "diagnose" : id}`, icon };
 }
 
-function detectIntent(q: string): string {
+/** Deep-link actions for an intent. Shared by the client and the API. */
+const INTENT_ACTIONS: Record<string, string[]> = {
+  diagnosis: ["diagnosis", "weather"],
+  credit: ["credit", "prices"],
+  marketplace: ["marketplace", "prices"],
+  map: ["map", "shipments"],
+  shipments: ["shipments", "map"],
+  alerts: ["alerts", "weather"],
+  prices: ["prices", "marketplace", "alerts"],
+  weather: ["weather", "alerts"],
+  general: ["weather", "diagnosis", "prices", "map"],
+};
+
+/** Resolve the action buttons for a detected intent (falls back to `general`). */
+export function actionsForIntent(intent: string): AssistantAction[] {
+  return (INTENT_ACTIONS[intent] ?? INTENT_ACTIONS.general).map(act);
+}
+
+/** Exported so the server route reuses the exact same intent router. */
+export function detectIntent(q: string): string {
   const s = q.toLowerCase();
   if (/(leaf|disease|spot|blight|diagnos|photo|image|fungus|yellowing|wilt)/.test(s)) return "diagnosis";
   if (/(loan|credit|insurance|interest|finance|kcc|premium|payout)/.test(s)) return "credit";
@@ -95,7 +117,7 @@ export function answerMessage(raw: string): ChatReply {
         intent,
         text:
           "Take a close-up photo of the affected part in good daylight (under 1.5 MB). I'll pre-process it on your phone, then gpt-4o mini reads the symptoms against the NER registry — 11 crops, graded severity, organic + chemical remedies with dosage and re-visit days. Results sit in your offline history too.",
-        actions: [act("diagnosis"), act("weather")],
+        actions: actionsForIntent(intent),
       };
     }
     case "credit": {
@@ -103,7 +125,7 @@ export function answerMessage(raw: string): ChatReply {
         intent,
         text:
           "Your credit readiness comes from district climate risk plus farm history — not a middleman's guess. Pick your district on the Credit page and you'll get an estimated approval band, rate and tenure, plus weather-index policies that auto-pay when rainfall crosses the trigger. Numbers are code-computed, never guessed by the model.",
-        actions: [act("credit"), act("prices")],
+        actions: actionsForIntent(intent),
       };
     }
     case "marketplace": {
@@ -111,7 +133,7 @@ export function answerMessage(raw: string): ChatReply {
         intent,
         text:
           "Listings carry grade, organic/GI certification and trace-to-farm proof. Payment goes into escrow and releases on delivery proof — that's how a smallholder sells 400 kg without a middleman, and a buyer buys without a default. You can filter by crop, state, grade and organic-only.",
-        actions: [act("marketplace"), act("prices")],
+        actions: actionsForIntent(intent),
       };
     }
     case "map": {
@@ -119,7 +141,7 @@ export function answerMessage(raw: string): ChatReply {
         intent,
         text:
           "There are 8 demo facilities across the NER map. The route engine is elevation-aware: it slows the estimate over climbs, shows the gain profile, and predicts shelf life on arrival. Bookings currently open through the demo hub on the Map page.",
-        actions: [act("map"), act("shipments")],
+        actions: actionsForIntent(intent),
       };
     }
     case "shipments": {
@@ -127,7 +149,7 @@ export function answerMessage(raw: string): ChatReply {
         intent,
         text:
           "The board tracks status from pickup to delivery with a shelf-life index for perishable lots. Pooling combines small consignments on one truck to cut freight per kilo — say the word and the wizard will suggest a pool for your route.",
-        actions: [act("shipments"), act("map")],
+        actions: actionsForIntent(intent),
       };
     }
     case "alerts": {
@@ -135,7 +157,7 @@ export function answerMessage(raw: string): ChatReply {
         intent,
         text:
           "Early warnings are organized by severity with district subscriptions and phone-bridge delivery. Acknowledge an alert and the board learns you've seen it — the advisory TTS reads it aloud even offline.",
-        actions: [act("alerts"), act("weather")],
+        actions: actionsForIntent(intent),
       };
     }
     case "prices": {
@@ -143,7 +165,7 @@ export function answerMessage(raw: string): ChatReply {
         intent,
         text:
           "King Chilli, Lakadong Turmeric, Queen Pineapple and more each have a 30-day trend, mandi vs eNAM quote and a rule-based sell-or-hold signal from momentum math. The fair-value band tells you if today's rate is high, inside, or below the range. Live feeds land with the FastAPI service.",
-        actions: [act("prices"), act("marketplace"), act("alerts")],
+        actions: actionsForIntent(intent),
       };
     }
     case "weather": {
@@ -151,7 +173,7 @@ export function answerMessage(raw: string): ChatReply {
         intent,
         text:
           "This week's block forecast drives the sowing calendar for your district, with indigenous-knowledge tips (ITK) in the loop. If rain or frost crosses warning thresholds, the alert board fires — subscribe your district to stay ahead.",
-        actions: [act("weather"), act("alerts")],
+        actions: actionsForIntent(intent),
       };
     }
     default: {
@@ -159,7 +181,7 @@ export function answerMessage(raw: string): ChatReply {
         intent,
         text:
           "I can help with 7 things today: sow-and-weather, crop diagnosis, prices, cold storage & routing, shipments, early alerts, and credit or insurance. Pick a quick reply, or ask in your own words — voice works too via the mic button.",
-        actions: [act("weather"), act("diagnosis"), act("prices"), act("map")],
+        actions: actionsForIntent(intent),
       };
     }
   }
