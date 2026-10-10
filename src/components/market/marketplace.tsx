@@ -7,6 +7,7 @@ import { Pill } from "@/components/ui/primitives";
 import { districtGeo } from "@/lib/geo";
 import { haversineKm } from "@/lib/logistics";
 import {
+  cropImage,
   GRADE_LABEL,
   LISTINGS,
   type Listing,
@@ -28,12 +29,15 @@ function ListingCard({
 }) {
   return (
     <article className="overflow-hidden rounded-3xl border border-forest-950/8 bg-white shadow-sm transition hover:shadow-md">
-      <div className={`relative h-36 bg-gradient-to-br ${l.grad}`}>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/85 text-forest-800 shadow">
-            <Icon name="leaf" className="h-7 w-7" />
-          </span>
-        </div>
+      <div className={`relative h-36 overflow-hidden bg-gradient-to-br ${l.grad}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={cropImage(l.cropId)}
+          alt={l.cropName}
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+          loading="lazy"
+        />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/30 to-transparent" />
         <div className="absolute top-3 left-3 flex gap-1.5">
           <span className="rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-ink-900">
             {GRADE_LABEL[l.grade]}

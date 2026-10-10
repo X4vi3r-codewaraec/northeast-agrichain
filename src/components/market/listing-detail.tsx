@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/icons";
 import { Pill } from "@/components/ui/primitives";
-import { GRADE_LABEL, listingTrace, polygonsToSvgPoints } from "@/lib/market";
+import { cropImage, GRADE_LABEL, listingTrace, polygonsToSvgPoints } from "@/lib/market";
 
 function Sparkline({ series, stroke = "#166534" }: { series: number[]; stroke?: string }) {
   const { points, min, max } = useMemo(() => {
@@ -82,12 +82,14 @@ export default function ListingDetail({ id }: { id: string }) {
           <div className="space-y-6">
             {/* Banner */}
             <div className="overflow-hidden rounded-3xl border border-forest-950/8 bg-white shadow-sm">
-              <div className={`relative h-48 bg-gradient-to-br ${listing.grad} sm:h-60`}>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="flex h-20 w-20 items-center justify-center rounded-3xl bg-white/85 text-forest-800 shadow">
-                    <Icon name="leaf" className="h-10 w-10" />
-                  </span>
-                </div>
+              <div className={`relative h-48 overflow-hidden bg-gradient-to-br ${listing.grad} sm:h-60`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={cropImage(listing.cropId)}
+                  alt={listing.cropName}
+                  className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-black/5 to-black/15" />
                 <div className="absolute top-4 left-4 flex gap-2">
                   <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-ink-900">
                     {GRADE_LABEL[listing.grade]}

@@ -1,7 +1,14 @@
 /** B2B marketplace listings (demo seed — served by the FastAPI service +
  *  PostGIS search once live). */
 
+import { CROPS } from "@/lib/data";
+
 export type ListingGrade = "A" | "B" | "C";
+
+/** Resolve a listing/crop id to its real photo asset in /public/crops. */
+export function cropImage(cropId: string): string {
+  return CROPS.find((c) => c.id === cropId)?.image ?? `/crops/${cropId}.jpg`;
+}
 
 export type Listing = {
   id: string;

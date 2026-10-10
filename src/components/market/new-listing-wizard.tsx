@@ -126,7 +126,16 @@ export default function NewListingWizard() {
                         : "border-forest-950/8 hover:border-forest-600/25"
                     }`}
                   >
-                    <span className={`block h-8 w-8 rounded-lg bg-gradient-to-br ${c.grad}`} />
+                    <span className={`relative block h-8 w-8 overflow-hidden rounded-lg bg-gradient-to-br ${c.grad}`}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={c.image}
+                        alt=""
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    </span>
                     <span className="mt-2 block text-xs font-bold text-ink-900">{c.name}</span>
                   </button>
                 ))}
@@ -286,6 +295,18 @@ export default function NewListingWizard() {
           {step === 4 ? (
             <div>
               <h2 className="font-display text-lg font-semibold text-ink-900">Review the lot</h2>
+              <div className={`relative mt-4 h-40 overflow-hidden rounded-2xl bg-gradient-to-br ${crop.grad}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={crop.image}
+                  alt={crop.name}
+                  className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                <span className="absolute bottom-3 left-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-ink-900">
+                  {crop.name} · {GRADE_LABEL[grade]}
+                </span>
+              </div>
               <dl className="mt-4 divide-y divide-forest-950/6 text-sm">
                 {[
                   ["Crop", `${crop.name} · ${GRADE_LABEL[grade]}`],
