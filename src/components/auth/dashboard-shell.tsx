@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useSyncExternalStore } from "react";
 import { Icon } from "@/components/icons";
 import { useSpeech } from "@/hooks/use-speech";
-import { clearSession, getSession, type Session } from "@/lib/auth-client";
+import { clearSession, useSession, type Session } from "@/lib/auth-client";
 import { ROLES } from "@/lib/data";
 import { dashboardSummary } from "@/lib/dashboard";
 
@@ -27,7 +27,7 @@ export function DashboardShell() {
   const router = useRouter();
   const mounted = useMounted();
   const { speak, stop, speaking } = useSpeech();
-  const session: Session | null = mounted ? getSession() : null;
+  const session: Session | null = useSession();
 
   const summary = useMemo(
     () => (session ? dashboardSummary(session.role, session.district, session.name) : null),

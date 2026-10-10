@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import { Icon } from "@/components/icons";
-import { clearSession, getSession, type Session } from "@/lib/auth-client";
+import { clearSession, useSession, type Session } from "@/lib/auth-client";
 import { ROLES } from "@/lib/data";
 import { LANGUAGES } from "@/lib/data";
 import { languageName, setLanguage, t, useLanguage } from "@/lib/i18n";
@@ -15,16 +15,6 @@ import {
   setVoiceRate,
 } from "@/lib/settings";
 
-const emptySubscribe = () => () => {};
-
-function useMounted(): boolean {
-  return useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false,
-  );
-}
-
 function subscribePrefs(cb: () => void) {
   window.addEventListener("nac-prefs", cb);
   return () => window.removeEventListener("nac-prefs", cb);
@@ -32,12 +22,11 @@ function subscribePrefs(cb: () => void) {
 
 export default function SettingsPanel() {
   const router = useRouter();
-  const mounted = useMounted();
   const lang = useLanguage();
   const rate = useSyncExternalStore(subscribePrefs, getVoiceRate, () => DEFAULT_VOICE_RATE);
   const saver = useSyncExternalStore(subscribePrefs, getDataSaver, () => false);
 
-  const session: Session | null = mounted ? getSession() : null;
+  const session: Session | null = useSession();
   const roleLabel = session ? ROLES.find((r) => r.id === session.role)?.label ?? session.role : "";
 
   return (

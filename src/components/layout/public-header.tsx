@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Suspense,
   useCallback,
@@ -12,7 +12,14 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Icon, type IconName } from "@/components/icons";
-import { LANGUAGES } from "@/lib/data";
+import { LANGUAGES, ROLES } from "@/lib/data";
+import {
+  clearSession,
+  reconcileSession,
+  roleHome,
+  useSession,
+  type Session,
+} from "@/lib/auth-client";
 import { setLanguage, t, useLanguage } from "@/lib/i18n";
 
 type NavItem = { href: string; key: string };
@@ -193,6 +200,130 @@ function MoreMenu({ pathname }: { pathname: string | null }) {
   );
 }
 
+function roleLabel(role: Session["role"]): string {
+  return ROLES.find((r) => r.id === role)?.label ?? role;
+}
+
+/** Reconcile the localStorage session mirror with the server once per mount. */
+function SessionSync() {
+  useEffect(() => {
+    void reconcileSession();
+  }, []);
+  return null;
+}
+
+function UserMenu({ session }: { session: Session }) {
+  const lang = useLanguage();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+  const ref = useDismiss(open, close);
+
+  const home = roleHome(session.role);
+  const initial = session.name.trim().slice(0, 1).toUpperCase() || "U";
+  const firstName = session.name.trim().split(/\s+/)[0] || session.name;
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Account: ${session.name}`}
+        className={`inline-flex h-10 items-center gap-2 rounded-full border border-forest-600/20 bg-white pr-2.5 pl-1.5 text-sm font-semibold text-ink-900 transition hover:border-forest-600/40 hover:bg-forest-50/70 ${
+          open ? "ring-2 ring-forest-600/15" : ""
+        }`}
+      >
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-forest-800 text-xs font-bold text-gold-300">
+          {initial}
+        </span>
+        <span className="max-w-[8rem] truncate">{firstName}</span>
+        <Icon
+          name="chevronDown"
+          className={`h-3.5 w-3.5 shrink-0 text-ink-500 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 z-50 mt-2 w-64 rounded-2xl border border-forest-950/10 bg-white p-1.5 shadow-xl shadow-forest-950/10"
+        >
+          <div className="flex items-center gap-3 rounded-xl px-3 py-2.5">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-forest-800 font-display text-sm font-semibold text-gold-300">
+              {initial}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold text-ink-900">{session.name}</p>
+              <p className="truncate text-xs text-ink-500">
+                {roleLabel(session.role)} · {session.district}, {session.state}
+              </p>
+            </div>
+          </div>
+          <div className="my-1 h-px bg-forest-950/8" />
+          <Link
+            href={home}
+            role="menuitem"
+            onClick={close}
+            className={`${MENU_ITEM_BASE} text-ink-700 hover:bg-sand-100 hover:text-ink-900`}
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-forest-100 text-forest-700">
+              <Icon name="chart" className="h-4 w-4" />
+            </span>
+            {t("nav.dashboard", lang)}
+          </Link>
+          <Link
+            href="/settings"
+            role="menuitem"
+            onClick={close}
+            className={`${MENU_ITEM_BASE} text-ink-700 hover:bg-sand-100 hover:text-ink-900`}
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-forest-100 text-forest-700">
+              <Icon name="globe" className="h-4 w-4" />
+            </span>
+            {t("settings.title", lang)}
+          </Link>
+          <div className="my-1 h-px bg-forest-950/8" />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              close();
+              clearSession();
+              router.push("/");
+              router.refresh();
+            }}
+            className={`${MENU_ITEM_BASE} text-clay-600 hover:bg-clay-100`}
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-clay-100 text-clay-600">
+              <Icon name="x" className="h-4 w-4" />
+            </span>
+            {t("nav.signout", lang)}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Log in button when signed out; the account menu when signed in. */
+export function AuthAction() {
+  const lang = useLanguage();
+  const session = useSession();
+
+  if (session) return <UserMenu session={session} />;
+
+  return (
+    <Link
+      href="/login"
+      className="inline-flex h-10 items-center rounded-full bg-forest-800 px-4 text-sm font-semibold text-sand-50 shadow-sm transition hover:bg-forest-700"
+    >
+      {t("nav.login", lang)}
+    </Link>
+  );
+}
+
 function DesktopNav({ pathname }: { pathname: string | null }) {
   const lang = useLanguage();
   return (
@@ -223,6 +354,8 @@ function DesktopNavWithPath() {
 function MobileNavPanel({ onClose }: { onClose: () => void }) {
   const pathname = usePathname();
   const lang = useLanguage();
+  const router = useRouter();
+  const session = useSession();
 
   return (
     <div className="fixed inset-0 z-50 xl:hidden" role="dialog" aria-modal="true" aria-label="Menu">
@@ -292,13 +425,50 @@ function MobileNavPanel({ onClose }: { onClose: () => void }) {
         </nav>
 
         <div className="border-t border-forest-950/10 p-4">
-          <Link
-            href="/login"
-            onClick={onClose}
-            className="inline-flex h-12 w-full items-center justify-center rounded-full bg-forest-800 px-4 text-sm font-semibold text-sand-50 shadow-sm transition hover:bg-forest-700"
-          >
-            {t("nav.login", lang)}
-          </Link>
+          {session ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 px-1">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-forest-800 font-display text-lg font-semibold text-gold-300">
+                  {session.name.trim().slice(0, 1).toUpperCase() || "U"}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-ink-900">{session.name}</p>
+                  <p className="truncate text-xs text-ink-500">
+                    {roleLabel(session.role)} · {session.district}
+                  </p>
+                </div>
+              </div>
+              <Link
+                href={roleHome(session.role)}
+                onClick={onClose}
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-forest-800 px-4 text-sm font-semibold text-sand-50 shadow-sm transition hover:bg-forest-700"
+              >
+                <Icon name="chart" className="h-4 w-4" />
+                {t("nav.dashboard", lang)}
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  clearSession();
+                  router.push("/");
+                  router.refresh();
+                }}
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-forest-950/15 px-4 text-sm font-semibold text-clay-600 transition hover:bg-clay-100"
+              >
+                <Icon name="x" className="h-4 w-4" />
+                {t("nav.signout", lang)}
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              onClick={onClose}
+              className="inline-flex h-12 w-full items-center justify-center rounded-full bg-forest-800 px-4 text-sm font-semibold text-sand-50 shadow-sm transition hover:bg-forest-700"
+            >
+              {t("nav.login", lang)}
+            </Link>
+          )}
         </div>
       </div>
     </div>
@@ -375,8 +545,6 @@ export function LogoLockup() {
 }
 
 export function Header() {
-  const lang = useLanguage();
-
   return (
     <header className="sticky top-0 z-40 border-b border-forest-950/5 bg-sand-50/85 backdrop-blur-md">
       <div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-2 px-4 sm:px-6 lg:px-8">
@@ -392,18 +560,14 @@ export function Header() {
 
         <div className="ml-auto hidden items-center gap-2 xl:flex">
           <LanguageSelect />
-          <Link
-            href="/login"
-            className="inline-flex h-10 items-center rounded-full bg-forest-800 px-4 text-sm font-semibold text-sand-50 shadow-sm transition hover:bg-forest-700"
-          >
-            {t("nav.login", lang)}
-          </Link>
+          <AuthAction />
         </div>
 
         <div className="ml-auto xl:hidden">
           <MobileNav />
         </div>
       </div>
+      <SessionSync />
     </header>
   );
 }
