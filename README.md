@@ -72,6 +72,7 @@ Postgres** (Neon) — no separate Python service is needed to deploy.
 | `POST /api/v1/auth/logout` | Revokes the session and clears cookies |
 | `GET /api/v1/auth/me` | Current user (or `null`) |
 | `GET /api/v1/health` | DB / auth / AI configuration status |
+| `GET /api/v1/weather?district=` | Live Open-Meteo current + 24h hourly + 7-day forecast for any NER district (offline mock fallback) |
 
 Sessions are httpOnly cookies (`nac_at` access, `nac_rt` refresh); `src/proxy.ts`
 guards app routes and gates `/admin` by role. When `AUTH_SECRET` is unset the
@@ -96,7 +97,7 @@ disabled, model error).
 | `/features` | Four-module platform tour |
 | `/crops` | NER specialty crop registry |
 | `/pricing-tracker` | Public price snapshot |
-| `/weather` | 7-day district climate outlook (live Open-Meteo + offline mock), crop calendar, ITK, voice advisory |
+| `/weather` | Live district climate: current conditions, 24-hour hourly outlook + 7-day forecast (Open-Meteo via `/api/v1/weather`, offline mock fallback), crop calendar, ITK, voice advisory |
 | `/alerts` | Early-warning board (flood/landslide/frost/pest), severity filters, district subscriptions |
 | `/diagnose` | AI crop diagnosis (photo → GPT-4o mini vision diagnosis, remedies, history, offline queue) |
 | `/map` | Storage & terrain logistics (facilities, distance/ETA, availability, elevation profile, route risk) |

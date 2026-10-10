@@ -44,10 +44,24 @@ function priceFacts(): string[] {
 
 async function weatherFacts(user: FactsUser): Promise<string[]> {
   const report = await fetchWeather(user.district);
-  const lines = report.days.slice(0, 4).map(
-    (d) =>
-      `- ${d.dayLabel}: ${d.tempMin}–${d.tempMax}°C, ${d.weatherLabel}, ` +
-      `rain ${d.precipProb}% (${d.precipMm} mm), wind ${d.windKmh} km/h`,
+  const lines: string[] = [];
+  const c = report.current;
+  if (c) {
+    lines.push(
+      `- Now: ${c.temp}°C (feels ${c.feelsLike}°), ${c.weatherLabel.toLowerCase()}, ` +
+        `humidity ${c.humidity}%, wind ${c.windKmh} km/h.`,
+    );
+    const nextRain = report.hourly.find((h) => h.precipProb >= 60);
+    if (nextRain) {
+      lines.push(`- Rain likely around ${nextRain.hourLabel} (${nextRain.precipProb}% chance).`);
+    }
+  }
+  lines.push(
+    ...report.days.slice(0, 4).map(
+      (d) =>
+        `- ${d.dayLabel}: ${d.tempMin}–${d.tempMax}°C, ${d.weatherLabel}, ` +
+        `rain ${d.precipProb}% (${d.precipMm} mm), wind ${d.windKmh} km/h`,
+    ),
   );
   return [`Weather for ${report.district} (source: ${report.source}):`, ...lines];
 }

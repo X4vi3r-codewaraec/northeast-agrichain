@@ -6,9 +6,9 @@ import { Icon, type IconName } from "@/components/icons";
 import { Eyebrow, Pill } from "@/components/ui/primitives";
 import { NER_STATES } from "@/lib/data";
 import { districtGeo } from "@/lib/geo";
+import { fetchWeatherReport } from "@/lib/weather-api";
 import {
   buildAdvisory,
-  fetchWeather,
   rainWindow,
   soilMoistureLevel,
   type WeatherReport,
@@ -371,6 +371,118 @@ function ItkPanel() {
   );
 }
 
+function uvBand(v: number): string {
+  if (v >= 11) return "Extreme";
+  if (v >= 8) return "Very high";
+  if (v >= 6) return "High";
+  if (v >= 3) return "Moderate";
+  return "Low";
+}
+
+/** Live "now" conditions pulled from the weather API's current block. */
+function CurrentNow({ report }: { report: WeatherReport }) {
+  const c = report.current;
+  return (
+    <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-forest-800 via-forest-900 to-forest-950 text-sand-50 shadow-lg">
+      <div className="flex flex-wrap items-center justify-between gap-6 p-6 sm:p-8">
+        <div className="flex items-center gap-5">
+          <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 text-gold-300">
+            <Icon name={c.icon} className="h-9 w-9" />
+          </span>
+          <div>
+            <p className="text-[11px] font-semibold tracking-[0.14em] text-forest-300 uppercase">
+              Live now · {report.place}
+            </p>
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-display text-6xl font-semibold text-sand-50">{c.temp}°</span>
+              <span className="text-sm text-forest-100/80">feels {c.feelsLike}°</span>
+            </div>
+            <p className="mt-1 text-sm font-medium text-forest-100/90">
+              {c.weatherLabel}
+              {c.precipMm > 0 ? ` · ${c.precipMm} mm past hour` : " · dry past hour"}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-x-10 gap-y-5 text-center">
+          <div>
+            <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-sky-300">
+              <Icon name="droplet" className="h-4.5 w-4.5" />
+            </span>
+            <p className="mt-1.5 font-display text-xl font-semibold text-sand-50">{c.humidity}%</p>
+            <p className="text-[11px] font-medium text-forest-100/70">humidity</p>
+          </div>
+          <div>
+            <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-gold-300">
+              <Icon name="wind" className="h-4.5 w-4.5" />
+            </span>
+            <p className="mt-1.5 font-display text-xl font-semibold text-sand-50">{c.windKmh}</p>
+            <p className="text-[11px] font-medium text-forest-100/70">km/h · gusts {c.gustKmh}</p>
+          </div>
+          <div>
+            <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-amber-300">
+              <Icon name="sun" className="h-4.5 w-4.5" />
+            </span>
+            <p className="mt-1.5 font-display text-xl font-semibold text-sand-50">
+              {c.uvIndex}
+              <span className="text-xs font-medium text-forest-100/70"> · {uvBand(c.uvIndex)}</span>
+            </p>
+            <p className="text-[11px] font-medium text-forest-100/70">UV index</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 bg-white/5 px-6 py-3 text-xs text-forest-100/80 sm:px-8">
+        <span className="inline-flex items-center gap-2">
+          <span
+            className={`h-2 w-2 rounded-full ${
+              report.source === "open-meteo" ? "bg-forest-400" : "bg-gold-400"
+            }`}
+          />
+          {report.source === "open-meteo"
+            ? "Live from Open-Meteo"
+            : "Offline deterministic model (no network)"}
+        </span>
+        <span>Observed as of {c.timeLabel} IST</span>
+      </div>
+    </div>
+  );
+}
+
+/** Scrollable strip of the next ~24 hours from the API's hourly block. */
+function HourlyStrip({ report }: { report: WeatherReport }) {
+  return (
+    <div className="rounded-3xl border border-forest-950/8 bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <Eyebrow>Next 24 hours</Eyebrow>
+          <h3 className="mt-2 font-display text-xl font-semibold text-ink-900">Hourly outlook</h3>
+        </div>
+        <Icon name="clock" className="h-5 w-5 text-ink-400" />
+      </div>
+      <div className="mt-5 flex gap-2.5 overflow-x-auto pb-2">
+        {report.hourly.map((h) => (
+          <div
+            key={h.isoTime}
+            className="flex min-w-[66px] flex-col items-center gap-1.5 rounded-2xl border border-forest-950/6 bg-sand-50/60 px-3 py-3 text-center"
+          >
+            <span className="text-[11px] font-bold text-ink-500">{h.hourLabel}</span>
+            <Icon name={h.icon} className="h-5 w-5 text-forest-700" />
+            <span className="text-sm font-bold text-ink-900">{h.temp}°</span>
+            <span
+              className={`text-[11px] font-semibold ${
+                h.precipProb >= 50 ? "text-sky-700" : "text-ink-400"
+              }`}
+            >
+              {h.precipProb}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function WeatherDashboard() {
   const [district, setDistrict] = useState(DEFAULT_DISTRICT);
   const [report, setReport] = useState<WeatherReport | null>(null);
@@ -379,7 +491,7 @@ export default function WeatherDashboard() {
   useEffect(() => {
     let cancelled = false;
     if (typeof window === "undefined") return;
-    fetchWeather(district).then((rep) => {
+    fetchWeatherReport(district).then((rep) => {
       if (cancelled) return;
       setReport(rep);
       setLoading(false);
@@ -391,7 +503,7 @@ export default function WeatherDashboard() {
 
   const refresh = () => {
     setLoading(true);
-    fetchWeather(district).then((rep) => {
+    fetchWeatherReport(district).then((rep) => {
       setReport(rep);
       setLoading(false);
     });
@@ -491,6 +603,9 @@ export default function WeatherDashboard() {
               </div>
             </div>
 
+            {/* Live now */}
+            {report && !loading && report.current ? <CurrentNow report={report} /> : null}
+
             {/* Today summary */}
             {loading || !report || !today ? (
               <div className="flex h-56 animate-pulse flex-col justify-center rounded-3xl border border-forest-950/8 bg-white p-8 text-center shadow-sm">
@@ -586,6 +701,8 @@ export default function WeatherDashboard() {
                 </div>
               </div>
             )}
+
+            {report && report.hourly.length > 0 ? <HourlyStrip report={report} /> : null}
 
             {/* Advisory */}
             {report ? (

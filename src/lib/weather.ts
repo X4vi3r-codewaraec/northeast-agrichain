@@ -20,12 +20,39 @@ export type DayForecast = {
   windKmh: number; // gust-max for the day
 };
 
+export type CurrentConditions = {
+  isoTime: string;
+  timeLabel: string; // "2:30 pm"
+  temp: number; // °C
+  feelsLike: number;
+  weatherCode: number;
+  weatherLabel: string;
+  icon: IconName;
+  humidity: number; // %
+  windKmh: number;
+  gustKmh: number;
+  uvIndex: number;
+  precipMm: number; // past hour
+};
+
+export type HourForecast = {
+  isoTime: string;
+  hourLabel: string; // "2 pm"
+  temp: number;
+  weatherCode: number;
+  icon: IconName;
+  precipProb: number; // 0–100
+};
+
 export type WeatherReport = {
   district: string;
   place: string;
   elevation: number;
   source: "open-meteo" | "mock";
   generatedAt: string; // ISO
+  current: CurrentConditions;
+  /** Next ~24 hours from the moment of the fetch. */
+  hourly: HourForecast[];
   days: DayForecast[];
 };
 
@@ -90,6 +117,21 @@ function dayLabel(dateStr: string): { dayLabel: string; monthLabel: string } {
   return { dayLabel: `${dayName} ${day}`, monthLabel: `${day} ${month}` };
 }
 
+function timeLabel(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-IN", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+function hourLabel(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-IN", {
+    hour: "numeric",
+    hour12: true,
+  });
+}
+
 /** Tiny seeded PRNG so offline demo data is stable across reloads. */
 function hashSeed(str: string): number {
   let h = 2166136261;
@@ -111,21 +153,42 @@ function mulberry32(seed: number) {
   };
 }
 
-type DailyRow = {
+/** Current conditions are returned as a single scalar row. */
+type CurrentRow = {
   time: string;
+  temperature_2m: number;
+  relative_humidity_2m: number;
+  apparent_temperature: number;
+  precipitation: number;
   weather_code: number;
-  temperature_2m_max: number;
-  temperature_2m_min: number;
-  precipitation_sum: number;
-  precipitation_probability_max: number;
-  wind_speed_10m_max: number;
-  relative_humidity_2m_max: number;
+  wind_speed_10m: number;
+  wind_gusts_10m?: number;
+  uv_index: number;
+};
+
+/** Open-Meteo returns column-oriented series: each field maps to a value array. */
+type ColumnSeries = {
+  time: string[];
+  [field: string]: (number | string | null)[];
 };
 
 type OpenMeteoResponse = {
-  daily?: DailyRow[];
+  current?: CurrentRow;
+  hourly?: ColumnSeries;
+  daily?: ColumnSeries;
   timezone?: string;
 };
+
+/** Read one value from a column array at row `i`. */
+function columnAt(
+  series: ColumnSeries | undefined,
+  field: string,
+  i: number,
+  fallback = 0,
+): number {
+  const v = series?.[field]?.[i];
+  return typeof v === "number" ? v : Number(v ?? fallback);
+}
 
 /** Fetch a 7-day forecast for a district from Open-Meteo (no API key needed). */
 export async function fetchWeather(district: string): Promise<WeatherReport> {
@@ -138,6 +201,9 @@ export async function fetchWeather(district: string): Promise<WeatherReport> {
 
   const url =
     `https://api.open-meteo.com/v1/forecast?latitude=${geo.lat}&longitude=${geo.lon}` +
+    `&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,` +
+    `wind_speed_10m,wind_gusts_10m,uv_index` +
+    `&hourly=temperature_2m,precipitation_probability,weather_code` +
     `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,` +
     `precipitation_probability_max,wind_speed_10m_max,relative_humidity_2m_max` +
     `&forecast_days=7&timezone=Asia%2FKolkata`;
@@ -154,26 +220,73 @@ export async function fetchWeather(district: string): Promise<WeatherReport> {
     if (!res.ok) return fallback;
 
     const json = (await res.json()) as OpenMeteoResponse;
-    const rows = json.daily ?? [];
-    if (rows.length === 0) return fallback;
+    const daily = json.daily;
+    if (!daily || !Array.isArray(daily.time) || daily.time.length === 0) {
+      return fallback;
+    }
 
-    const days: DayForecast[] = rows.map((r) => {
-      const info = wmoInfo(r.weather_code);
-      const labels = dayLabel(r.time);
+    const days: DayForecast[] = daily.time.map((t, i) => {
+      const code = Math.round(columnAt(daily, "weather_code", i));
+      const info = wmoInfo(code);
+      const labels = dayLabel(String(t));
       return {
-        date: r.time,
+        date: String(t),
         ...labels,
-        weatherCode: r.weather_code,
+        weatherCode: code,
         weatherLabel: info.label,
         icon: info.icon,
-        tempMax: Math.round(r.temperature_2m_max ?? 0),
-        tempMin: Math.round(r.temperature_2m_min ?? 0),
-        precipProb: Math.round(r.precipitation_probability_max ?? 0),
-        precipMm: Number((r.precipitation_sum ?? 0).toFixed(1)),
-        humidity: Math.round(r.relative_humidity_2m_max ?? 70),
-        windKmh: Math.round(r.wind_speed_10m_max ?? 8),
+        tempMax: Math.round(columnAt(daily, "temperature_2m_max", i)),
+        tempMin: Math.round(columnAt(daily, "temperature_2m_min", i)),
+        precipProb: Math.round(columnAt(daily, "precipitation_probability_max", i)),
+        precipMm: Number(columnAt(daily, "precipitation_sum", i).toFixed(1)),
+        humidity: Math.round(columnAt(daily, "relative_humidity_2m_max", i, 70)),
+        windKmh: Math.round(columnAt(daily, "wind_speed_10m_max", i, 8)),
       };
     });
+
+    const current: CurrentConditions | null = json.current
+      ? {
+          isoTime: json.current.time,
+          timeLabel: timeLabel(json.current.time),
+          temp: Math.round(json.current.temperature_2m ?? 0),
+          feelsLike: Math.round(
+            json.current.apparent_temperature ?? json.current.temperature_2m ?? 0,
+          ),
+          weatherCode: json.current.weather_code,
+          weatherLabel: wmoInfo(json.current.weather_code).label,
+          icon: wmoInfo(json.current.weather_code).icon,
+          humidity: Math.round(json.current.relative_humidity_2m ?? 70),
+          windKmh: Math.round(json.current.wind_speed_10m ?? 8),
+          gustKmh: Math.round(
+            json.current.wind_gusts_10m ?? json.current.wind_speed_10m ?? 8,
+          ),
+          uvIndex: Number((json.current.uv_index ?? 0).toFixed(1)),
+          precipMm: Number((json.current.precipitation ?? 0).toFixed(1)),
+        }
+      : null;
+
+    // Next 24 rolling hours (drop stale rows from earlier today).
+    const hourly: HourForecast[] = [];
+    const hRaw = json.hourly;
+    if (hRaw && Array.isArray(hRaw.time)) {
+      const cutoff = Date.now() - 30 * 60 * 1000;
+      for (let i = 0; i < hRaw.time.length && hourly.length < 24; i++) {
+        const iso = String(hRaw.time[i]);
+        if (Date.parse(iso) < cutoff) continue;
+        const code = Math.round(columnAt(hRaw, "weather_code", i));
+        const info = wmoInfo(code);
+        hourly.push({
+          isoTime: iso,
+          hourLabel: hourLabel(iso),
+          temp: Math.round(columnAt(hRaw, "temperature_2m", i)),
+          weatherCode: code,
+          icon: info.icon,
+          precipProb: Math.round(columnAt(hRaw, "precipitation_probability", i)),
+        });
+      }
+    }
+
+    if (!current || hourly.length < 4) return fallback;
 
     return {
       district,
@@ -181,9 +294,15 @@ export async function fetchWeather(district: string): Promise<WeatherReport> {
       elevation: geo.elevation,
       source: "open-meteo",
       generatedAt: new Date().toISOString(),
+      current,
+      hourly,
       days,
     };
-  } catch {
+  } catch (cause) {
+    console.error(
+      "[weather] open-meteo fetch failed, using mock:",
+      cause instanceof Error ? cause.message : String(cause),
+    );
     return fallback;
   }
 }
@@ -206,7 +325,7 @@ export function mockWeather(district: string): WeatherReport {
     const wave = 0.5 + 0.5 * Math.sin(i * 1.7 + hashSeed(district) % 7);
     const rainy = wave > 0.72;
     const code = rainy
-      ? Math.random() < 0.35 ? 95 : Math.random() < 0.5 ? 80 : 63
+      ? rand() < 0.35 ? 95 : rand() < 0.5 ? 80 : 63
       : wave > 0.55
         ? 3
         : wave > 0.4
@@ -238,12 +357,62 @@ export function mockWeather(district: string): WeatherReport {
     });
   }
 
+  // "Current" conditions + next-24h hourly under the same deterministic model.
+  const t0 = days[0];
+  const hourNow = now.getHours();
+
+  // Sun-time curve so temperature follows the day (peak ~3 pm).
+  const diurnal = (hour: number) =>
+    0.5 + 0.5 * Math.sin(((hour - 9) / 24) * 2 * Math.PI);
+
+  const current: CurrentConditions = {
+    isoTime: now.toISOString(),
+    timeLabel: timeLabel(now.toISOString()),
+    temp: Math.round(t0.tempMin + (t0.tempMax - t0.tempMin) * diurnal(hourNow)),
+    feelsLike: Math.round(
+      t0.tempMin +
+        (t0.tempMax - t0.tempMin) * diurnal(hourNow) -
+        (t0.precipProb >= 55 ? 1 : 0),
+    ),
+    weatherCode: t0.weatherCode,
+    weatherLabel: t0.weatherLabel,
+    icon: t0.icon,
+    humidity: t0.humidity,
+    windKmh: t0.windKmh,
+    gustKmh: Math.round(t0.windKmh * 1.4),
+    uvIndex:
+      hourNow >= 6 && hourNow <= 17
+        ? Math.round(10 * Math.sin(((hourNow - 6) / 12) * Math.PI))
+        : 0,
+    precipMm: t0.precipProb >= 55 ? Number((1.2 + rand() * 3).toFixed(1)) : 0,
+  };
+
+  const hourly: HourForecast[] = [];
+  for (let i = 0; i < 24; i++) {
+    const t = new Date(now);
+    t.setMinutes(0, 0, 0);
+    t.setHours(now.getHours() + i);
+    hourly.push({
+      isoTime: t.toISOString(),
+      hourLabel: hourLabel(t.toISOString()),
+      temp: Math.round(t0.tempMin + (t0.tempMax - t0.tempMin) * diurnal(t.getHours())),
+      weatherCode: t0.weatherCode,
+      icon: t0.icon,
+      precipProb: Math.max(
+        0,
+        Math.min(100, Math.round(t0.precipProb * (0.5 + rand() * 1.1))),
+      ),
+    });
+  }
+
   return {
     district,
     place: geo?.label ?? district,
     elevation: geo?.elevation ?? 120,
     source: "mock",
     generatedAt: new Date().toISOString(),
+    current,
+    hourly,
     days,
   };
 }
