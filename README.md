@@ -95,7 +95,7 @@ disabled, model error).
 |---|---|
 | `/` | Landing page (hero, district picker, price ticker, modules, crops, personas, voice band, CTA) |
 | `/features` | Four-module platform tour |
-| `/crops` | NER specialty crop registry — 8 illustrated crop cards with GI-tagged regions and AI diagnosis CTA |
+| `/crops` | NER specialty crop registry — 8 crop cards with real photographs, GI-tagged regions and AI diagnosis CTA |
 | `/pricing-tracker` | Public price snapshot |
 | `/weather` | Live district climate: current conditions, 24-hour hourly outlook + 7-day forecast (Open-Meteo via `/api/v1/weather`, offline mock fallback), crop calendar, ITK, voice advisory |
 | `/alerts` | Early-warning board (flood/landslide/frost/pest), severity filters, district subscriptions |
@@ -210,3 +210,18 @@ disabled, model error).
 - [x] Static build passes; lint clean; API routes verified dynamic
 - [ ] Wire the remaining module engines (weather, map, shipments, marketplace, finance) to `gpt-4o-mini` + the database
 - [ ] Real SMS gateway (hackathon build accepts any 6-digit code), Open-Meteo + mandi/eNAM data adapters
+
+### Photo credits (`public/crops/`)
+
+Real photographs from [Wikimedia Commons](https://commons.wikimedia.org), licensed CC BY-SA — all resized to 1000px for the demo:
+
+| Card | Photo | License |
+|---|---|---|
+| King Chilli | [Naga jolokia chili.jpg — Balaram Mahalder](https://commons.wikimedia.org/wiki/File:Naga_jolokia_chili.jpg) | CC BY-SA 3.0 |
+| Lakadong Turmeric | [Turmeric rhizomes.jpg — Lavinia Engelbrecht](https://commons.wikimedia.org/wiki/File:Turmeric_rhizomes.jpg) | CC BY-SA 4.0 |
+| Queen Pineapple | [AnanasComosusOnPlant.jpg — Markus Leupold-Löwenthal](https://commons.wikimedia.org/wiki/File:AnanasComosusOnPlant.jpg) | CC BY-SA 3.0 |
+| Large Cardamom | [BlackCardamom.jpg — Brian Arthur](https://commons.wikimedia.org/wiki/File:BlackCardamom.jpg) | CC BY-SA 3.0 |
+| Joha Rice | [Joha rice.jpg — Chiring chandan](https://commons.wikimedia.org/wiki/File:Joha_rice.jpg) | CC BY-SA 4.0 |
+| Assam Tea | [Assam tea garden view.jpeg — Diganta Talukdar](https://commons.wikimedia.org/wiki/File:Assam_tea_garden_view.jpeg) | CC BY-SA 4.0 |
+| Kiwi | [Kiwi (Actinidia chinensis) 1 Luc Viatour.jpg — Luc Viatour](https://commons.wikimedia.org/wiki/File:Kiwi_(Actinidia_chinensis)_1_Luc_Viatour.jpg) | CC BY-SA 2.5 |
+| Mizo Ginger | [Fresh ginger rhizome 01.jpg — Friday musa](https://commons.wikimedia.org/wiki/File:Fresh_ginger_rhizome_01.jpg) | CC BY-SA 4.0 |

@@ -92,7 +92,7 @@ export type Crop = {
   fact: string;
   grad: string; // tailwind gradient classes
   accent: string;
-  image: string; // illustrated asset in /public/crops
+  image: string; // real photo asset in /public/crops (Wikimedia Commons, see README credits)
 };
 
 export const CROPS: Crop[] = [
@@ -104,7 +104,7 @@ export const CROPS: Crop[] = [
     fact: "1.1M SHU heat · GI-tagged",
     grad: "from-gold-300 via-gold-400 to-clay-500",
     accent: "text-clay-600",
-    image: "/crops/king-chilli.svg",
+    image: "/crops/king-chilli.jpg",
   },
   {
     id: "lakadong-turmeric",
@@ -114,7 +114,7 @@ export const CROPS: Crop[] = [
     fact: "7–9% curcumin · highest in the world",
     grad: "from-amber-200 to-gold-600",
     accent: "text-gold-700",
-    image: "/crops/lakadong-turmeric.svg",
+    image: "/crops/lakadong-turmeric.jpg",
   },
   {
     id: "queen-pineapple",
@@ -124,7 +124,7 @@ export const CROPS: Crop[] = [
     fact: "GI-tagged · twice the Vitamin C",
     grad: "from-yellow-200 to-gold-400",
     accent: "text-gold-700",
-    image: "/crops/queen-pineapple.svg",
+    image: "/crops/queen-pineapple.jpg",
   },
   {
     id: "large-cardamom",
@@ -134,7 +134,7 @@ export const CROPS: Crop[] = [
     fact: "GI-tagged · Himalayan spice",
     grad: "from-emerald-200 to-forest-600",
     accent: "text-forest-700",
-    image: "/crops/large-cardamom.svg",
+    image: "/crops/large-cardamom.jpg",
   },
   {
     id: "joha-rice",
@@ -144,7 +144,7 @@ export const CROPS: Crop[] = [
     fact: "GI-tagged · aromatic short-grain",
     grad: "from-sand-200 to-gold-300",
     accent: "text-gold-800",
-    image: "/crops/joha-rice.svg",
+    image: "/crops/joha-rice.jpg",
   },
   {
     id: "assam-tea",
@@ -154,7 +154,7 @@ export const CROPS: Crop[] = [
     fact: "World’s largest tea-growing region",
     grad: "from-forest-300 to-forest-700",
     accent: "text-forest-800",
-    image: "/crops/assam-tea.svg",
+    image: "/crops/assam-tea.jpg",
   },
   {
     id: "kiwi",
@@ -164,7 +164,7 @@ export const CROPS: Crop[] = [
     fact: "Cool-climate superfruit",
     grad: "from-lime-200 to-emerald-500",
     accent: "text-emerald-700",
-    image: "/crops/kiwi.svg",
+    image: "/crops/kiwi.jpg",
   },
   {
     id: "mizo-ginger",
@@ -174,7 +174,7 @@ export const CROPS: Crop[] = [
     fact: "High oleoresin, prized for oils",
     grad: "from-clay-100 to-clay-400",
     accent: "text-clay-600",
-    image: "/crops/mizo-ginger.svg",
+    image: "/crops/mizo-ginger.jpg",
   },
 ];
 
