@@ -7,7 +7,7 @@ import { isSupportedImage, visionDiagnosis } from "@/lib/diagnose/vision";
 import { isAiConfigured } from "@/lib/openai";
 
 const schema = z.object({
-  image: z.string().min(32, "A leaf photo is required."),
+  image: z.string().min(32, "A leaf photo is required.").max(4_500_000, "That photo is too large."),
   cropId: z.string().min(1).max(60),
   part: z.enum(["leaf", "fruit", "stem", "whole"]),
   district: z.string().min(1).max(80),
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
   if (!isSupportedImage(image)) {
     return jsonError(
       "invalid_image",
-      "Use a JPG, PNG or WebP close-up under 1.5 MB.",
+      "Use a JPG, PNG or WebP close-up (about 3 MB max).",
       400,
     );
   }

@@ -26,8 +26,9 @@ export type VisionInput = {
   thumbnail?: string;
 };
 
-/** ~6 MB of base64 ≈ 4.5 MB decoded — matches the client's hill-bandwidth cap. */
-const MAX_BASE64 = 6 * 1024 * 1024;
+/** ~4 MB of base64 ≈ 3 MB decoded — comfortably under Vercel's 4.5 MB
+ *  serverless request-body limit, and far above the client's ≤1024px JPEG. */
+const MAX_BASE64 = 4 * 1024 * 1024;
 
 function hashSeed(s: string): number {
   let h = 2166136261;
