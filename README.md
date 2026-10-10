@@ -95,7 +95,7 @@ disabled, model error).
 |---|---|
 | `/` | Landing page (hero, district picker, price ticker, modules, crops, personas, voice band, CTA) |
 | `/features` | Four-module platform tour |
-| `/crops` | NER specialty crop registry |
+| `/crops` | NER specialty crop registry — 8 illustrated crop cards with GI-tagged regions and AI diagnosis CTA |
 | `/pricing-tracker` | Public price snapshot |
 | `/weather` | Live district climate: current conditions, 24-hour hourly outlook + 7-day forecast (Open-Meteo via `/api/v1/weather`, offline mock fallback), crop calendar, ITK, voice advisory |
 | `/alerts` | Early-warning board (flood/landslide/frost/pest), severity filters, district subscriptions |

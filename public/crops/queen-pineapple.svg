@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" role="img" aria-label="Golden Queen pineapple with crown leaves">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFD66B"/>
+      <stop offset="1" stop-color="#E9A33B"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#74C69D"/>
+      <stop offset="1" stop-color="#2D6A4F"/>
+    </linearGradient>
+    <pattern id="dia" width="46" height="30" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <path d="M0,15 h46 M23,0 v30" stroke="#C8862A" stroke-width="3" fill="none" opacity="0.5"/>
+    </pattern>
+    <clipPath id="bodyClip">
+      <path d="M400,210 C 470,210 500,262 500,292 C 500,342 452,368 400,368 C 348,368 300,342 300,292 C 300,262 330,210 400,210 Z"/>
+    </clipPath>
+  </defs>
+
+  <ellipse cx="400" cy="362" rx="150" ry="14" fill="#7A4312" opacity="0.16"/>
+
+  <!-- crown leaves -->
+  <g stroke-width="0">
+    <path d="M400,216 C 348,168 322,120 330,74 C 358,118 384,164 396,212 Z" fill="url(#leaf)" transform="rotate(-6 372 150)"/>
+    <path d="M400,210 C 366,150 300,120 262,96 C 300,152 354,180 396,208 Z" fill="url(#leaf)" transform="rotate(-2 334 156)"/>
+    <path d="M400,210 C 430,150 492,116 530,90 C 494,150 446,182 404,210 Z" fill="url(#leaf)" transform="rotate(3 466 156)"/>
+    <path d="M400,216 C 448,164 486,124 500,72 C 470,122 440,164 422,210 Z" fill="url(#leaf)" transform="rotate(8 452 148)"/>
+    <path d="M400,214 C 372,140 352,84 356,40 C 378,92 406,148 414,208 Z" fill="url(#leaf)" transform="rotate(-12 386 130)"/>
+    <path d="M400,214 C 430,138 452,84 452,38 C 440,96 424,150 412,206 Z" fill="url(#leaf)" transform="rotate(14 426 128)"/>
+  </g>
+
+  <!-- fruit body -->
+  <path d="M400,210 C 470,210 500,262 500,292 C 500,342 452,368 400,368 C 348,368 300,342 300,292 C 300,262 330,210 400,210 Z" fill="url(#body)"/>
+  <g clip-path="url(#bodyClip)">
+    <rect x="290" y="205" width="220" height="168" fill="url(#dia)"/>
+    <path d="M300,210 C 330,220 470,220 500,210" stroke="#FFE29A" stroke-width="5" fill="none" opacity="0.7"/>
+    <ellipse cx="368" cy="286" rx="26" ry="22" fill="#FFFFFF" opacity="0.22" transform="rotate(-20 368 286)"/>
+  </g>
+
+  <!-- leaf tips echoed in front -->
+  <path d="M400,362 C 382,378 360,386 348,384" stroke="url(#leaf)" stroke-width="7" stroke-linecap="round" fill="none"/>
+</svg>

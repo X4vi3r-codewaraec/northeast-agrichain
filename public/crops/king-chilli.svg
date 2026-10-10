@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" role="img" aria-label="Red Bhut Jolokia chillies">
+  <defs>
+    <linearGradient id="red" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#EF6A5F"/>
+      <stop offset="0.55" stop-color="#D43B3B"/>
+      <stop offset="1" stop-color="#A21F1F"/>
+    </linearGradient>
+    <linearGradient id="redHi" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F58B76"/>
+      <stop offset="1" stop-color="#C62E2E"/>
+    </linearGradient>
+    <linearGradient id="stem" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5A9A68"/>
+      <stop offset="1" stop-color="#2F6B42"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#74C69D"/>
+      <stop offset="1" stop-color="#2D6A4F"/>
+    </linearGradient>
+  </defs>
+
+  <ellipse cx="400" cy="356" rx="180" ry="16" fill="#7A3B12" opacity="0.16"/>
+
+  <!-- centre chilli (upright, slight bend) -->
+  <g transform="translate(402,170)">
+    <path d="M-12,-52 C 24,-28 30,34 12,84 C 0,116 -10,146 -20,172 C -23,181 -13,185 -6,176 C 12,150 10,110 6,78 C -2,40 -4,-22 -12,-52 Z" fill="url(#red)"/>
+    <path d="M-12,-50 C -6,-28 -6,6 4,26" stroke="url(#redHi)" stroke-width="7" stroke-linecap="round" fill="none" opacity="0.85"/>
+    <path d="M-20,-56 C -32,-86 -16,-104 2,-96" stroke="url(#stem)" stroke-width="9" stroke-linecap="round" fill="none"/>
+    <path d="M8,-100 C 30,-96 34,-66 22,-68 C 14,-69 6,-82 8,-100 Z" fill="url(#leaf)" transform="rotate(-12 16 -84)"/>
+  </g>
+
+  <!-- left chilli (hanging left) -->
+  <g transform="translate(300,140) rotate(-14)">
+    <path d="M-12,-48 C 22,-22 28,36 10,80 C 0,110 -8,138 -18,162 C -21,170 -12,174 -5,166 C 10,142 8,106 4,78 C -4,44 -6,-20 -12,-48 Z" fill="url(#redHi)"/>
+    <path d="M-18,-52 C -30,-78 -14,-96 2,-88" stroke="url(#stem)" stroke-width="8" stroke-linecap="round" fill="none"/>
+    <path d="M-10,-44 C -2,-24 -4,4 8,22" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.35"/>
+  </g>
+
+  <!-- right chilli (hanging right, smaller) -->
+  <g transform="translate(520,168) rotate(10) scale(0.82)">
+    <path d="M-12,-48 C 22,-22 28,36 10,80 C 0,110 -8,138 -18,162 C -21,170 -12,174 -5,166 C 10,142 8,106 4,78 C -4,44 -6,-20 -12,-48 Z" fill="url(#red)"/>
+    <path d="M-18,-52 C -30,-78 -14,-96 2,-88" stroke="url(#stem)" stroke-width="8" stroke-linecap="round" fill="none"/>
+    <path d="M-10,-44 C -2,-24 -4,4 8,22" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.3"/>
+  </g>
+</svg>

@@ -37,13 +37,19 @@ export default function CropsPage() {
               className="group overflow-hidden rounded-2xl border border-forest-950/8 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
             >
               <div
-                className={`relative flex h-36 items-end overflow-hidden bg-gradient-to-br ${c.grad} p-4`}
+                className={`relative flex h-40 items-end overflow-hidden bg-gradient-to-br ${c.grad}`}
               >
-                <span className="pointer-events-none absolute -right-2 -top-6 font-display text-[110px] leading-none font-bold text-white/40 select-none">
-                  {c.name.charAt(0)}
-                </span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={c.image}
+                  alt=""
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                  loading="lazy"
+                />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/25 to-transparent" />
                 <span
-                  className={`rounded-full bg-white/85 px-2.5 py-1 text-[11px] font-semibold ${c.accent}`}
+                  className={`absolute bottom-3 left-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold shadow-sm backdrop-blur-sm ${c.accent}`}
                 >
                   GI-tagged region
                 </span>

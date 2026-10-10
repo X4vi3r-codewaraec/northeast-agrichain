@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" role="img" aria-label="Green cardamom pods on their stem">
+  <defs>
+    <linearGradient id="pod" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6FB98D"/>
+      <stop offset="1" stop-color="#36724F"/>
+    </linearGradient>
+    <linearGradient id="pod2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#84C999"/>
+      <stop offset="1" stop-color="#3E7C5A"/>
+    </linearGradient>
+    <linearGradient id="stem" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7BAE7F"/>
+      <stop offset="1" stop-color="#4A7A55"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#74C69D"/>
+      <stop offset="1" stop-color="#2D6A4F"/>
+    </linearGradient>
+  </defs>
+
+  <ellipse cx="400" cy="356" rx="170" ry="15" fill="#1E4A2E" opacity="0.14"/>
+
+  <!-- main stem -->
+  <path d="M400,20 C 396,70 397,120 402,176" stroke="url(#stem)" stroke-width="8" stroke-linecap="round" fill="none"/>
+
+  <!-- leaves near top -->
+  <path d="M404,40 C 470,30 520,48 548,84 C 512,92 458,76 404,40 Z" fill="url(#leaf)" opacity="0.85"/>
+  <path d="M398,30 C 320,18 268,44 244,86 C 284,94 342,74 398,30 Z" fill="url(#leaf)" opacity="0.85"/>
+
+  <!-- central pod cluster -->
+  <g>
+    <path d="M402,168 C 330,180 296,232 300,282 C 303,316 336,336 382,336 C 430,336 462,316 462,286 C 462,236 428,184 402,168 Z" fill="url(#pod2)" opacity="0.55"/>
+    <ellipse cx="400" cy="252" rx="40" ry="66" fill="url(#pod)"/>
+    <ellipse cx="400" cy="252" rx="40" ry="66" fill="none" stroke="#2E6B42" stroke-width="3" opacity="0.6"/>
+    <path d="M400,190 v124 M382,196 c 4,20 4,40 0,58 M418,196 c -4,20 -4,40 0,58" stroke="#2E6B42" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.55"/>
+    <path d="M400,186 C 414,196 420,208 418,220" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.35"/>
+  </g>
+
+  <!-- side pod, open showing seeds -->
+  <g transform="translate(478,268) rotate(14)">
+    <ellipse rx="34" ry="52" fill="url(#pod2)"/>
+    <ellipse rx="34" ry="52" fill="none" stroke="#2E6B42" stroke-width="2.5" opacity="0.5"/>
+    <path d="M8,-40 C 26,-16 30,16 16,40" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.3"/>
+    <!-- opened cavity with dark seeds -->
+    <path d="M-6,-26 C 2,-30 10,-24 8,-14 L -2,-8 C -9,-14 -12,-22 -6,-26 Z" fill="#5B3A1E"/>
+    <circle cx="2" cy="-18" r="3.4" fill="#2E1B0C"/>
+  </g>
+
+  <!-- small front pod -->
+  <g transform="translate(322,300) rotate(-10)">
+    <ellipse rx="28" ry="46" fill="url(#pod)"/>
+    <ellipse rx="28" ry="46" fill="none" stroke="#2E6B42" stroke-width="2.5" opacity="0.5"/>
+    <path d="M6,-34 C 20,-14 20,14 8,34" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.3"/>
+  </g>
+</svg>
