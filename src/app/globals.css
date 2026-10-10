@@ -1,0 +1,134 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+  --font-display: var(--font-lora), ui-serif, Georgia, "Times New Roman", serif;
+
+  --color-sand-50: #fbf9f3;
+  --color-sand-100: #f5efe2;
+  --color-sand-200: #e9e0ca;
+  --color-sand-300: #d8caab;
+
+  --color-ink-300: #7d9486;
+  --color-ink-500: #46604f;
+  --color-ink-700: #22372a;
+  --color-ink-900: #0d2216;
+
+  --color-forest-50: #f0f7f1;
+  --color-forest-100: #dcefe0;
+  --color-forest-200: #b8ddc0;
+  --color-forest-300: #8cc49c;
+  --color-forest-400: #5fa96f;
+  --color-forest-500: #3d8b52;
+  --color-forest-600: #2e6b3e;
+  --color-forest-700: #234f31;
+  --color-forest-800: #1a3b25;
+  --color-forest-900: #122a1c;
+  --color-forest-950: #0a1e12;
+
+  --color-gold-50: #fdf6e8;
+  --color-gold-100: #fbeccc;
+  --color-gold-200: #f7d999;
+  --color-gold-300: #f2c266;
+  --color-gold-400: #eda944;
+  --color-gold-500: #e8902b;
+  --color-gold-600: #d97420;
+  --color-gold-700: #b4581d;
+  --color-gold-800: #91451c;
+
+  --color-clay-100: #f4e8e2;
+  --color-clay-200: #ead5c9;
+  --color-clay-400: #c98d6a;
+  --color-clay-500: #b06f4c;
+  --color-clay-600: #96583a;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-sand-50);
+  color: var(--color-ink-900);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---- Marquee for the price ticker ---- */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 36s linear infinite;
+}
+
+/* ---- Gentle float for hero cards ---- */
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 6s ease-in-out infinite;
+}
+
+.animate-float-slower {
+  animation: float-slow 8s ease-in-out infinite;
+}
+
+/* ---- Soft pulsing live dots ---- */
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2.4s ease-in-out infinite;
+}
+
+/* ---- Fade-up on scroll (simple, no JS) via animation when visible ---- */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-marquee,
+  .animate-float-slow,
+  .animate-float-slower,
+  .animate-pulse-soft {
+    animation: none;
+  }
+}
