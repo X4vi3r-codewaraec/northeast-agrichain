@@ -8,10 +8,8 @@ export const metadata: Metadata = {
 
 export default function ForgotPage() {
   return (
-    <section className="bg-sand-50 py-16 sm:py-24">
-      <div className="px-4 sm:px-6 lg:px-8">
-        <ForgotForm />
-      </div>
+    <section className="flex min-h-[calc(100dvh-4rem)] items-center justify-center bg-sand-50 px-4 py-12 sm:px-6 lg:px-8">
+      <ForgotForm />
     </section>
   );
 }
